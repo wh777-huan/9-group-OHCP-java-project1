@@ -1,0 +1,15 @@
+target/
+out/
+*.class
+*.jar
+!ohcp-app.jar
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+*.db
+*.mv.db
+*.trace.db
+.DS_Store
