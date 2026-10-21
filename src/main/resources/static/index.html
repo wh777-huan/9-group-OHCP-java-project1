@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>农作物缺素症识别与科学施肥建议</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: #f0f7ee; min-height: 100vh; }
+        .container { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+        .header { text-align: center; margin-bottom: 28px; }
+        .header h1 { font-size: 22px; color: #2d6a4f; margin-bottom: 6px; }
+        .header p { font-size: 13px; color: #74c69d; }
+
+        .input-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        .input-card h2 { font-size: 15px; color: #40916c; margin-bottom: 12px; }
+        .input-card textarea { width: 100%; height: 120px; border: 1.5px solid #b7e4c7; border-radius: 10px; padding: 12px; font-size: 14px; resize: none; outline: none; transition: border-color 0.2s; }
+        .input-card textarea:focus { border-color: #40916c; }
+        .input-card textarea::placeholder { color: #95d5b2; }
+        .btn { display: block; width: 100%; padding: 13px; background: #40916c; color: white; border: none; border-radius: 10px; font-size: 15px; cursor: pointer; margin-top: 12px; transition: background 0.2s; }
+        .btn:hover { background: #2d6a4f; }
+        .btn:disabled { background: #95d5b2; cursor: not-allowed; }
+
+        .result-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: none; }
+        .result-card.show { display: block; }
+        .result-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .element-badge { background: #d8f3dc; color: #2d6a4f; padding: 6px 16px; border-radius: 20px; font-size: 15px; font-weight: bold; }
+        .confidence { color: #74c69d; font-size: 13px; }
+        .section { margin-bottom: 14px; }
+        .section-title { font-size: 12px; color: #95d5b2; margin-bottom: 4px; }
+        .section-content { font-size: 14px; color: #1b4332; line-height: 1.7; }
+        .politic { background: #f0f7ee; border-left: 3px solid #40916c; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 13px; color: #2d6a4f; line-height: 1.6; margin-top: 16px; }
+        .error { color: #e63946; font-size: 14px; padding: 12px; background: #ffe5e5; border-radius: 8px; }
+
+        .loading { display: none; text-align: center; padding: 20px; color: #74c69d; font-size: 14px; }
+        .loading.show { display: block; }
+
+        .example { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .example-btn { background: #f0f7ee; border: 1px solid #b7e4c7; border-radius: 6px; padding: 4px 10px; font-size: 12px; color: #40916c; cursor: pointer; }
+        .example-btn:hover { background: #d8f3dc; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🌱 农作物缺素症识别与科学施肥建议</h1>
+        <p>AI 智能诊断 · 科学施肥 · 科技兴农</p>
+    </div>
+
+    <div class="input-card">
+        <h2>📝 描述作物症状</h2>
+        <textarea id="symptomInput" placeholder="请描述作物症状，如：水稻叶片从下部老叶开始均匀发黄，植株矮小，分蘖减少"></textarea>
+        <div class="example">
+            <button class="example-btn" onclick="setExample('水稻叶片从下部老叶开始均匀发黄，植株矮小，分蘖减少')">🌾 水稻发黄</button>
+            <button class="example-btn" onclick="setExample('小麦叶缘焦枯，叶片边缘发黄干枯')">🌾 小麦焦叶</button>
+            <button class="example-btn" onclick="setExample('玉米幼叶卷曲畸形，叶尖黄化')">🌽 玉米卷叶</button>
+            <button class="example-btn" onclick="setExample('番茄叶片叶脉间失绿黄化，叶脉保持绿色')">🍅 番茄黄化</button>
+        </div>
+        <button class="btn" id="submitBtn" onclick="submitDiagnose()">开始诊断</button>
+    </div>
+
+    <div class="loading" id="loading">
+        <div>🔍 正在检索知识库并分析...</div>
+    </div>
+
+    <div class="result-card" id="resultCard">
+        <div class="result-header">
+            <span class="element-badge" id="resultElement">—</span>
+            <span class="confidence" id="resultConfidence">置信度：—</span>
+        </div>
+        <div class="section">
+            <div class="section-title">缺素简介</div>
+            <div class="section-content" id="resultDesc"></div>
+        </div>
+        <div class="section">
+            <div class="section-title">有机肥 / 生物肥施用方案</div>
+            <div class="section-content" id="resultOrganic"></div>
+        </div>
+        <div class="section">
+            <div class="section-title">化学肥料追施方案</div>
+            <div class="section-content" id="resultChemical"></div>
+        </div>
+        <div class="section">
+            <div class="section-title">施肥安全与提醒</div>
+            <div class="section-content" id="resultSafety"></div>
+        </div>
+        <div class="politic" id="resultPolitic"></div>
+    </div>
+
+    <div class="result-card" id="errorCard" style="border-left: 4px solid #e63946;">
+        <div class="error" id="errorMsg"></div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:8080/api';
+
+    function setExample(text) {
+        document.getElementById('symptomInput').value = text;
+    }
+
+    async function submitDiagnose() {
+        const symptom = document.getElementById('symptomInput').value.trim();
+        if (!symptom) { alert('请先描述作物症状'); return; }
+
+        const btn = document.getElementById('submitBtn');
+        const loading = document.getElementById('loading');
+        const resultCard = document.getElementById('resultCard');
+        const errorCard = document.getElementById('errorCard');
+
+        btn.disabled = true;
+        loading.classList.add('show');
+        resultCard.classList.remove('show');
+        errorCard.classList.remove('show');
+
+        try {
+            const resp = await fetch(API_BASE + '/diagnose', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ symptom })
+            });
+            const data = await resp.json();
+
+            document.getElementById('resultElement').textContent = data.element;
+            document.getElementById('resultConfidence').textContent = '置信度：' + (data.confidence * 100).toFixed(0) + '%';
+            document.getElementById('resultDesc').textContent = data.description;
+            document.getElementById('resultOrganic').textContent = data.organicFertilizer;
+            document.getElementById('resultChemical').textContent = data.chemicalFertilizer;
+            document.getElementById('resultSafety').textContent = data.safetyWithGuidance.split('\n\n💡')[0];
+            document.getElementById('resultPolitic').textContent = '💡 ' + (data.safetyWithGuidance.split('\n\n💡')[1] || '');
+            resultCard.classList.add('show');
+        } catch (e) {
+            document.getElementById('errorMsg').textContent = '诊断失败：' + e.message + '（请确认后端服务已启动）';
+            errorCard.classList.add('show');
+        } finally {
+            btn.disabled = false;
+            loading.classList.remove('show');
+        }
+    }
+</script>
+</body>
+</html>
