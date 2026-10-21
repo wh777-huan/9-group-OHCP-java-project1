@@ -9,13 +9,16 @@
 
 ## 快速启动
 
-### 1. 配置环境变量
+### 1. （可选）启用大模型整理
+
+项目默认关闭模型调用，可使用本地知识库结果运行，不需要 API Key。需要 DeepSeek 整理结果时再设置：
 
 ```bash
 # Windows PowerShell
 $env:OHCP_LLM_API_KEY="your_deepseek_api_key"
 $env:OHCP_LLM_BASE_URL="https://api.deepseek.com"
 $env:OHCP_LLM_MODEL="deepseek-chat"
+$env:OHCP_LLM_ENABLED="true"
 ```
 
 ### 2. 构建并运行
@@ -42,7 +45,7 @@ mvn spring-boot:run
                         ↓
               KnowledgeBaseService（本地知识库检索）
                         ↓
-              SpringAI ChatClient（DeepSeek 整理建议）
+              本地结果回退 / SpringAI ChatClient（可选 DeepSeek 整理建议）
                         ↓
               前端展示缺素类型 + 置信度 + 施肥建议 + 思政引导
 ```
@@ -56,6 +59,7 @@ mvn spring-boot:run
 
 知识库位于 `src/main/resources/knowledge/nutrient_deficiency.json`，
 当前包含 8 种常见缺素症数据：氮(N)、磷(P)、钾(K)、钙(Ca)、镁(Mg)、铁(Fe)、锌(Zn)、硼(B)。
+当前页面中的匹配度来自知识库关键词检索计分，不代表经田间数据校准的诊断概率。具体施肥用量应结合土壤检测、作物生育期和当地农技人员意见。
 
 ## 人员分工
 
@@ -63,7 +67,7 @@ mvn spring-boot:run
 |------|--------|
 | 知识库构建与爬虫 | — |
 | 后端 SpringBoot + SpringAI | 李幸欣 |
-| 前端页面 | — |
+| 前端页面 | 李幸欣（联调） |
 | PPT 制作 | — |
 
 > 详细协作协议见 `AGENTS.md`

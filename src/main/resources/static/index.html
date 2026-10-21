@@ -29,6 +29,9 @@
         .section { margin-bottom: 14px; }
         .section-title { font-size: 12px; color: #95d5b2; margin-bottom: 4px; }
         .section-content { font-size: 14px; color: #1b4332; line-height: 1.7; }
+        .mode { margin-left: auto; color: #718096; font-size: 11px; }
+        .sources { margin: 4px 0 0 18px; color: #1b4332; font-size: 13px; line-height: 1.7; }
+        .sources a { color: #2d6a4f; }
         .politic { background: #f0f7ee; border-left: 3px solid #40916c; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 13px; color: #2d6a4f; line-height: 1.6; margin-top: 16px; }
         .error { color: #e63946; font-size: 14px; padding: 12px; background: #ffe5e5; border-radius: 8px; }
 
@@ -66,11 +69,20 @@
     <div class="result-card" id="resultCard">
         <div class="result-header">
             <span class="element-badge" id="resultElement">—</span>
-            <span class="confidence" id="resultConfidence">置信度：—</span>
+            <span class="confidence" id="resultConfidence">知识匹配度：—</span>
+            <span class="mode" id="resultMode"></span>
+        </div>
+        <div class="section">
+            <div class="section-title">其他可能结果</div>
+            <div class="section-content" id="resultCandidates"></div>
         </div>
         <div class="section">
             <div class="section-title">缺素简介</div>
             <div class="section-content" id="resultDesc"></div>
+        </div>
+        <div class="section">
+            <div class="section-title">农艺调控</div>
+            <div class="section-content" id="resultAgronomic"></div>
         </div>
         <div class="section">
             <div class="section-title">有机肥 / 生物肥施用方案</div>
@@ -79,6 +91,14 @@
         <div class="section">
             <div class="section-title">化学肥料追施方案</div>
             <div class="section-content" id="resultChemical"></div>
+        </div>
+        <div class="section">
+            <div class="section-title">建议整理</div>
+            <div class="section-content" id="resultSuggestion"></div>
+        </div>
+        <div class="section">
+            <div class="section-title">知识来源</div>
+            <ul class="sources" id="resultSources"></ul>
         </div>
         <div class="section">
             <div class="section-title">施肥安全与提醒</div>
@@ -119,13 +139,43 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ symptom })
             });
+            if (!resp.ok) {
+                const detail = await resp.json().catch(() => ({}));
+                throw new Error(detail.detail || detail.message || ('请求失败（HTTP ' + resp.status + '）'));
+            }
             const data = await resp.json();
 
             document.getElementById('resultElement').textContent = data.element;
-            document.getElementById('resultConfidence').textContent = '置信度：' + (data.confidence * 100).toFixed(0) + '%';
+            document.getElementById('resultConfidence').textContent = '知识匹配度：' + (data.confidence * 100).toFixed(0) + '%';
+            document.getElementById('resultMode').textContent = data.mode === 'llm_enhanced' ? '大模型辅助整理' : '本地知识库结果';
+            document.getElementById('resultCandidates').textContent = (data.candidates || [])
+                .slice(1).map(item => item.element + '（匹配度 ' + (item.confidence * 100).toFixed(0) + '%）').join('、') || '暂无其他匹配项';
             document.getElementById('resultDesc').textContent = data.description;
+            document.getElementById('resultAgronomic').textContent = data.agronomicAdvice || '请结合土壤检测、作物生育期和当地农技指导调整管理措施。';
             document.getElementById('resultOrganic').textContent = data.organicFertilizer;
             document.getElementById('resultChemical').textContent = data.chemicalFertilizer;
+            document.getElementById('resultSuggestion').textContent = data.suggestion || data.description;
+            const sourceList = document.getElementById('resultSources');
+            sourceList.replaceChildren();
+            (data.sources || []).forEach(source => {
+                const item = document.createElement('li');
+                if (source.url && /^https?:\/\//i.test(source.url)) {
+                    const link = document.createElement('a');
+                    link.href = source.url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.textContent = source.title || source.url;
+                    item.append(link);
+                } else {
+                    item.textContent = source.title || '来源待补充';
+                }
+                sourceList.append(item);
+            });
+            if (!sourceList.children.length) {
+                const item = document.createElement('li');
+                item.textContent = '当前知识条目尚未关联来源';
+                sourceList.append(item);
+            }
             document.getElementById('resultSafety').textContent = data.safetyWithGuidance.split('\n\n💡')[0];
             document.getElementById('resultPolitic').textContent = '💡 ' + (data.safetyWithGuidance.split('\n\n💡')[1] || '');
             resultCard.classList.add('show');

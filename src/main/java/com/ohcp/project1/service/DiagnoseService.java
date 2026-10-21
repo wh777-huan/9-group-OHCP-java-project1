@@ -1,7 +1,8 @@
 package com.ohcp.project1.service;
 
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.SystemUserMessage;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,19 +17,29 @@ public class DiagnoseService {
 
     private final KnowledgeBaseService knowledgeBase;
     private final ChatClient chatClient;
+    private final boolean llmEnabled;
 
-    public DiagnoseService(KnowledgeBaseService knowledgeBase, ChatClient.Builder chatClientBuilder) {
+    public DiagnoseService(KnowledgeBaseService knowledgeBase,
+                           ObjectProvider<ChatClient.Builder> chatClientBuilder,
+                           @Value("${app.llm.enabled:false}") boolean llmEnabled) {
         this.knowledgeBase = knowledgeBase;
-        this.chatClient = chatClientBuilder.build();
+        ChatClient.Builder builder = chatClientBuilder.getIfAvailable();
+        this.chatClient = builder == null ? null : builder.build();
+        this.llmEnabled = llmEnabled;
     }
 
     public DiagnoseResult diagnose(String symptomText) {
+        if (symptomText == null || symptomText.isBlank()) {
+            throw new IllegalArgumentException("请先描述作物和症状。");
+        }
+
         // Step 1: 知识库优先检索
         List<KnowledgeBaseService.Candidate> candidates = knowledgeBase.search(symptomText);
 
         if (candidates.isEmpty()) {
             return new DiagnoseResult("未知", 0.0,
-                    "未能在本地知识库中找到匹配的缺素症，请提供更详细症状描述。", "", "", "");
+                    "未能在本地知识库中找到匹配的缺素症，请补充作物种类、受影响叶片部位和症状变化。",
+                    "", "", "", "", List.of(), "local_fallback", List.of());
         }
 
         // Step 2: 取置信度最高的 2 个候选，送 LLM 整理
@@ -41,12 +52,20 @@ public class DiagnoseService {
         String context = buildContext(candidates);
         String prompt = buildPrompt(symptomText, topNames, context);
 
-        String suggestion = "";
+        String suggestion;
+        String mode = "local_fallback";
         try {
+            if (!llmEnabled || chatClient == null) {
+                throw new IllegalStateException("未启用大模型，使用本地知识库建议");
+            }
             suggestion = chatClient.prompt()
                     .user(prompt)
                     .call()
                     .content();
+            if (suggestion == null || suggestion.isBlank()) {
+                throw new IllegalStateException("模型返回内容为空");
+            }
+            mode = "llm_enhanced";
         } catch (Exception e) {
             // LLM 调用失败时退回到知识库原始数据
             suggestion = fallbackSuggestion(top.deficiency);
@@ -58,10 +77,17 @@ public class DiagnoseService {
         return new DiagnoseResult(
                 top.deficiency.element,
                 top.confidence,
-                top.deficiency.description,
+                "",
                 top.deficiency.organicFertilizer,
                 top.deficiency.chemicalFertilizer,
-                top.deficiency.safetyNote + "\n\n💡 " + politicGuidance
+                top.deficiency.safetyNote + "\n\n💡 " + politicGuidance,
+                top.deficiency.description,
+                suggestion,
+                mode,
+                candidates.stream().limit(3)
+                        .map(c -> new CandidateResult(c.deficiency.element, c.confidence))
+                        .toList(),
+                List.of()
         );
     }
 
@@ -116,6 +142,15 @@ public class DiagnoseService {
             String description,
             String organicFertilizer,
             String chemicalFertilizer,
-            String safetyWithGuidance
+            String safetyWithGuidance,
+            String agronomicAdvice,
+            String suggestion,
+            String mode,
+            List<CandidateResult> candidates,
+            List<SourceResult> sources
     ) {}
+
+    public record CandidateResult(String element, double confidence) {}
+
+    public record SourceResult(String title, String url) {}
 }
