@@ -2,7 +2,7 @@ target/
 out/
 *.class
 *.jar
-!ohcp-app.jar
+!ohcp-agri-agent.jar
 .idea/
 *.iml
 .vscode/
@@ -13,3 +13,4 @@ out/
 *.mv.db
 *.trace.db
 .DS_Store
+*.log

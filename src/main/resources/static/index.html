@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>农作物缺素症识别与科学施肥建议</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            background: #f4f7f2;
+            color: #22301f;
+            line-height: 1.7;
+        }
+        .wrap { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+        header { margin-bottom: 24px; }
+        h1 { font-size: 24px; margin: 0 0 6px; color: #2e5d33; }
+        .sub { color: #6b7a68; font-size: 14px; }
+        .card {
+            background: #fff;
+            border: 1px solid #dde5da;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+        .field { flex: 1 1 200px; display: flex; flex-direction: column; }
+        label { font-size: 13px; color: #4a5a47; margin-bottom: 4px; }
+        input, textarea {
+            font: inherit;
+            padding: 8px 10px;
+            border: 1px solid #cfdacb;
+            border-radius: 6px;
+            background: #fbfdfa;
+        }
+        textarea { min-height: 72px; resize: vertical; }
+        button {
+            font: inherit;
+            padding: 10px 22px;
+            border: none;
+            border-radius: 6px;
+            background: #2e7d32;
+            color: #fff;
+            cursor: pointer;
+        }
+        button:disabled { background: #9bb89d; cursor: not-allowed; }
+        .result { display: none; }
+        .result.show { display: block; }
+        .candidate {
+            display: inline-block;
+            margin: 0 8px 8px 0;
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: #e8f3e6;
+            color: #2e5d33;
+            font-size: 14px;
+        }
+        .section { margin-top: 16px; }
+        .section h3 {
+            font-size: 15px;
+            margin: 0 0 6px;
+            color: #2e5d33;
+            padding-left: 8px;
+            border-left: 3px solid #7cb342;
+        }
+        .civics {
+            margin-top: 20px;
+            padding: 14px 16px;
+            background: #fff8e6;
+            border-left: 4px solid #f0b429;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #6b5320;
+        }
+        .sources { margin-top: 12px; font-size: 12px; color: #87948a; word-break: break-all; }
+        .muted { color: #8b978a; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <h1>农作物缺素症识别与科学施肥建议</h1>
+        <p class="sub">描述作物长势与症状，系统检索本地知识库识别缺素类型，并给出科学施肥建议。</p>
+    </header>
+
+    <form class="card" id="form">
+        <div class="row">
+            <div class="field">
+                <label for="crop">作物类型</label>
+                <input id="crop" name="crop" placeholder="如：水稻、小麦、玉米" required>
+            </div>
+            <div class="field">
+                <label for="part">症状部位</label>
+                <input id="part" name="part" placeholder="如：下部老叶、叶缘、新叶">
+            </div>
+        </div>
+        <div class="row">
+            <div class="field">
+                <label for="symptom">症状表现</label>
+                <textarea id="symptom" name="symptom"
+                          placeholder="如：从下部老叶开始均匀发黄，植株矮小，分蘖减少" required></textarea>
+            </div>
+        </div>
+        <div class="row">
+            <div class="field">
+                <label for="environment">发生环境（可选）</label>
+                <input id="environment" name="environment" placeholder="如：沙质土、低温多雨、连作地块">
+            </div>
+        </div>
+        <button type="submit" id="submitBtn">开始识别</button>
+        <span class="muted" id="hint"></span>
+    </form>
+
+    <section class="card result" id="result">
+        <h2 id="resultTitle" style="font-size:18px;margin:0 0 12px;color:#2e5d33;"></h2>
+        <div id="candidates"></div>
+        <div class="section" id="secIntro"></div>
+        <div class="section" id="secAgro"></div>
+        <div class="section" id="secOrganic"></div>
+        <div class="section" id="secChemical"></div>
+        <div class="section" id="secSafety"></div>
+        <div class="civics" id="civics"></div>
+        <div class="sources" id="sources"></div>
+    </section>
+</div>
+
+<script>
+    const $ = (id) => document.getElementById(id);
+
+    function section(title, text) {
+        if (!text) return '';
+        return `<h3>${title}</h3><div>${escapeHtml(text)}</div>`;
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    $('form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = $('submitBtn');
+        btn.disabled = true;
+        $('hint').textContent = '识别中…';
+
+        const payload = {
+            crop: $('crop').value.trim(),
+            part: $('part').value.trim(),
+            symptom: $('symptom').value.trim(),
+            environment: $('environment').value.trim()
+        };
+
+        try {
+            const resp = await fetch('/api/diagnose', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            render(await resp.json());
+            $('hint').textContent = '';
+        } catch (err) {
+            $('hint').textContent = '请求失败：' + err.message;
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    function render(data) {
+        const candidates = (data.candidates || [])
+            .map(c => `<span class="candidate">${escapeHtml(c.element)}　置信度 ${(c.confidence * 100).toFixed(0)}%</span>`)
+            .join('');
+        $('candidates').innerHTML = candidates || '<p class="muted">未返回候选缺素类型</p>';
+        $('resultTitle').textContent = data.crop ? data.crop + ' · 识别结果' : '识别结果';
+        $('secIntro').innerHTML = section('缺素简介', data.introduction);
+        $('secAgro').innerHTML = section('农艺调控', data.agronomicMeasures);
+        $('secOrganic').innerHTML = section('有机 / 生物肥', data.organicFertilizer);
+        $('secChemical').innerHTML = section('化学施肥', data.chemicalFertilizer);
+        $('secSafety').innerHTML = section('安全与减量提醒', data.safetyNotice);
+        $('civics').textContent = data.civicsNote || '';
+        $('civics').style.display = data.civicsNote ? 'block' : 'none';
+        $('sources').textContent = (data.sources && data.sources.length)
+            ? '知识库来源：' + data.sources.join('　')
+            : '';
+        $('result').classList.add('show');
+    }
+
+    fetch('/api/health').then(r => r.json()).then(d => {
+        $('hint').textContent = '知识库已载入 ' + d.knowledgeBaseSize + ' 条';
+    }).catch(() => {});
+</script>
+</body>
+</html>

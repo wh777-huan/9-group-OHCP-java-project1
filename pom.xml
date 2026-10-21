@@ -4,25 +4,64 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.5.16</version>
+    <relativePath/>
+  </parent>
+
   <groupId>com.ohcp</groupId>
-  <artifactId>ohcp-project1</artifactId>
+  <artifactId>ohcp-agri-agent</artifactId>
   <version>1.0.0</version>
-  <packaging>jar</packaging>
-  <name>OHCP-java-project1</name>
+  <name>OHCP 农作物缺素症识别与科学施肥建议智能体</name>
 
   <properties>
-    <maven.compiler.release>21</maven.compiler.release>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <junit.version>5.11.4</junit.version>
+    <java.version>21</java.version>
+    <spring-ai.version>1.1.8</spring-ai.version>
+    <langchain4j.version>1.22.0</langchain4j.version>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-bom</artifactId>
+        <version>${spring-ai.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-bom</artifactId>
+        <version>${langchain4j.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
-    <!-- 测试：Harness 维度 20% + 覆盖率 15% 的得分点 -->
+    <!-- Web：REST 接口 + 静态前端 -->
     <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>${junit.version}</version>
-      <scope>test</scope>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- Spring AI：ChatClient，接 OpenAI 兼容接口（DeepSeek / 通义 / 本地 Ollama 均可） -->
+    <dependency>
+      <groupId>org.springframework.ai</groupId>
+      <artifactId>spring-ai-starter-model-openai</artifactId>
+    </dependency>
+
+    <!-- langchain4j：智能体框架（题目要求二选一，这里选了它） -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-open-ai</artifactId>
     </dependency>
 
     <!-- 爬虫 -->
@@ -32,37 +71,27 @@
       <version>1.18.3</version>
     </dependency>
 
-    <!-- 数据库：嵌入式，免安装，上课现场最稳 -->
+    <!-- 知识库持久化（可换 JSON 文件或向量库） -->
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
-      <version>2.3.232</version>
+      <scope>runtime</scope>
     </dependency>
 
-    <!-- JSON / 大模型接口 -->
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-      <version>2.18.2</version>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
   <build>
-    <finalName>ohcp-app</finalName>
+    <finalName>ohcp-agri-agent</finalName>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.13.0</version>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.2</version>
-      </plugin>
-
-      <!-- 覆盖率报告：mvn test 后看 target/site/jacoco/index.html -->
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
@@ -76,43 +105,6 @@
             <id>report</id>
             <phase>test</phase>
             <goals><goal>report</goal></goals>
-            <configuration>
-              <!-- AgentClient 依赖外部密钥与在线接口，单元测试无法覆盖，明确排除并在 README 说明 -->
-              <excludes>
-                <exclude>com/ohcp/project1/agent/**</exclude>
-              </excludes>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- mvn -q exec:java 直接跑 -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>3.5.0</version>
-        <configuration>
-          <mainClass>com.ohcp.project1.App</mainClass>
-        </configuration>
-      </plugin>
-
-      <!-- mvn package 产出可双击运行的单文件 jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.6.0</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals><goal>shade</goal></goals>
-            <configuration>
-              <createDependencyReducedPom>false</createDependencyReducedPom>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>com.ohcp.project1.App</mainClass>
-                </transformer>
-              </transformers>
-            </configuration>
           </execution>
         </executions>
       </plugin>
