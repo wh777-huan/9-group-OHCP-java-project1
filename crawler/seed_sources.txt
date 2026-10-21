@@ -1,0 +1,13 @@
+# 采集源配置：每行一个公开 URL，# 开头为注释
+# 优先选择可公开访问、含缺素症与施肥科普正文的页面（百度百科词条为结构化科普内容）
+https://baike.baidu.com/item/缺氮
+https://baike.baidu.com/item/缺磷
+https://baike.baidu.com/item/缺钾
+https://baike.baidu.com/item/缺镁
+https://baike.baidu.com/item/缺锌
+https://baike.baidu.com/item/缺硼
+https://baike.baidu.com/item/缺铁
+https://baike.baidu.com/item/缺钙
+https://www.moa.gov.cn
+https://www.agri.cn
+http://www.natesc.org.cn

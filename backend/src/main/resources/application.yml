@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: crop-nutrient-agent
+  jackson:
+    serialization:
+      fail-on-empty-beans: false
+
+# ===== 大模型配置（可选增强）=====
+# 业务核心识别逻辑依赖本地知识库检索，大模型仅用于结果整理输出（RAG）。
+# 填写 api-key 后自动启用；留空则自动降级为纯知识库规则输出，现场演示零依赖。
+llm:
+  enabled: true
+  base-url: https://api.deepseek.com/v1
+  api-key: ${LLM_API_KEY:sk-xxxxxxxx}
+  model-name: deepseek-chat
+  temperature: 0.2
+  max-tokens: 2000
+
+# ===== 应用配置 =====
+app:
+  knowledge-file: knowledge/knowledge.json
+  top-candidates: 3
+  confidence-floor: 0.15
+
+logging:
+  level:
+    com.ohcp.agent: INFO

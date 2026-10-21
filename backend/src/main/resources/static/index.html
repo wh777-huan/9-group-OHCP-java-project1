@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>农作物缺素症识别与科学施肥建议智能体</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="header">
+    <div class="header-inner">
+        <div class="brand">
+            <div class="brand-icon">
+                <svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true">
+                    <path d="M24 6c-9 6-14 13-14 22 0 8 6 14 14 14s14-6 14-14c0-9-5-16-14-22z" fill="#2e7d32"/>
+                    <path d="M24 12c-4 7-8 13-8 19a8 8 0 0 0 16 0c0-6-4-12-8-19z" fill="#66bb6a"/>
+                    <path d="M24 20v22M24 24c-3 2-4 5-3 8" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div>
+                <h1>农作物缺素症识别与科学施肥建议智能体</h1>
+                <p class="slogan">藏粮于地 藏粮于技 · 用 AI 守护粮食安全</p>
+            </div>
+        </div>
+        <div class="status-bar">
+            <span class="dot"></span><span id="svc-status">服务检测中…</span>
+            <span id="llm-badge" class="badge hidden"></span>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+    <section class="card input-card">
+        <h2>输入作物缺素症状</h2>
+        <p class="hint">描述作物类型、症状部位、症状表现与生长环境，越具体识别越准</p>
+        <div class="chips" id="chips"></div>
+        <textarea id="input-text" rows="4"
+                  placeholder="例如：水稻，叶片从下部老叶开始均匀发黄，植株矮小，分蘖减少。"></textarea>
+        <div class="input-actions">
+            <div class="mode-group">
+                <label class="mode-item">
+                    <input type="radio" name="mode" value="farmer" checked>
+                    <span>农户简易版</span>
+                </label>
+                <label class="mode-item">
+                    <input type="radio" name="mode" value="tech">
+                    <span>农技专业版</span>
+                </label>
+            </div>
+            <button id="submit-btn" class="btn-primary">识别缺素并生成施肥建议</button>
+        </div>
+    </section>
+
+    <div id="result-area" class="result-area hidden">
+
+        <section class="card candidates-card">
+            <h2>缺素识别结果（多候选）</h2>
+            <div id="candidates"></div>
+            <div class="risk-row">
+                <span class="label">养分缺乏风险等级</span>
+                <span id="risk-badge" class="risk"></span>
+            </div>
+        </section>
+
+        <section class="card advice-card">
+            <div class="advice-head">
+                <h2>科学施肥建议</h2>
+                <span id="source-badge" class="badge"></span>
+            </div>
+            <div id="advice-body"></div>
+            <div id="education-box" class="education-box"></div>
+            <div id="science-card" class="science-card"></div>
+        </section>
+
+        <section class="card stats-card">
+            <h2>农技大数据看板 · 高频缺素查询 TOP5</h2>
+            <div id="stats-body"></div>
+        </section>
+
+    </div>
+
+    <section class="card stats-card" id="stats-standalone">
+        <h2>农技大数据看板 · 高频缺素查询 TOP5</h2>
+        <div id="stats-body-standalone"></div>
+    </section>
+
+</main>
+
+<footer class="footer">
+    <p>数据来源：本地私有缺素症知识库（爬虫采集公开农技资料 + 清洗结构化构建）+ 大模型整理增强（RAG）</p>
+    <p>OHCP 一小时智能编程大赛 · 农作物缺素症识别与科学施肥建议智能体</p>
+</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>

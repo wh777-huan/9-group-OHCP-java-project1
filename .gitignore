@@ -1,0 +1,15 @@
+# 编译产物
+backend/target/
+*.log
+*.err.log
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 便携环境（体积大，按需在本地保留；仓库不包含）
+tools/
+
+# 系统文件
+.DS_Store
+Thumbs.db
