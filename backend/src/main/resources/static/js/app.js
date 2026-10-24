@@ -115,6 +115,9 @@
             box.textContent = a.simple || (a.name + '：请按下方建议操作。');
             body.appendChild(box);
             if (a.description) addBlock(body, '缺素简介', a.description);
+            if (a.agronomic) addBlock(body, '农艺调控手段', a.agronomic);
+            if (a.organic) addBlock(body, '有机肥 / 生物肥施用方案', a.organic);
+            if (a.chemical) addBlock(body, '化学肥料追施方案', a.chemical);
             if (a.safety) addBlock(body, '施肥安全与减量提醒', a.safety);
             return;
         }

@@ -116,13 +116,16 @@ public class AgentService {
             // 简易版由渲染器生成；专业版展示完整字段
         }
 
-        // 5. 组装响应（简易版只保留 simple + 关键字段，专业版输出完整方案）
+        // 5. 组装响应（农户版保留施肥方案：施肥建议是核心需求，两种模式都完整输出）
         if (mode.equals("farmer")) {
             AdviceDto simple = new AdviceDto();
             simple.setElement(advice.getElement());
             simple.setName(advice.getName());
             simple.setDescription(advice.getDescription());
             simple.setSimple(advice.getSimple() != null ? advice.getSimple() : advice.getChemical());
+            simple.setAgronomic(advice.getAgronomic());
+            simple.setOrganic(advice.getOrganic());
+            simple.setChemical(advice.getChemical());
             simple.setScienceCard(advice.getScienceCard());
             simple.setEducation(advice.getEducation());
             simple.setSafety(advice.getSafety());

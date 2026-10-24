@@ -27,6 +27,13 @@ public class VectorRetrieval {
     private static final Pattern CJK = Pattern.compile("[\\u4e00-\\u9fff]");
     private static final Pattern LATIN = Pattern.compile("[a-zA-Z0-9]+");
 
+    /** 低于该原始余弦分视为无关输入，不强行归因（app.confidence-floor，默认 0.08） */
+    @org.springframework.beans.factory.annotation.Value("${app.confidence-floor:0.08}")
+    private double confidenceFloor;
+
+    /** 元素名直击的加分幅度（0.15）：余弦满分为 1，加分不超过该量级，保持排序可控 */
+    private static final double ELEMENT_BOOST = 0.15;
+
     /** 由 KnowledgeBaseService 在启动后注入全部条目并建索引 */
     public void buildIndex(List<KnowledgeEntry> entries) {
         docVectors.clear();
@@ -139,8 +146,28 @@ public class VectorRetrieval {
 
     /**
      * 相似度检索：返回按得分降序的候选，附匹配依据（命中的症状关键词/描述）。
+     *
+     * <p>两步走：<b>绝对门槛</b>——首位原始余弦低于 {@code app.confidence-floor}
+     * 时直接返回空，无关输入不强行归因；<b>相对校准</b>——只有通过门槛的查询
+     * 才把分数映射到 0.5~0.95 区间便于展示，最高 0.95 而非 0.99，以示「非校准概率」。
      */
     public List<Candidate> search(String query, int topN) {
+        List<Candidate> raw = searchRaw(query, topN);
+        if (raw.isEmpty() || raw.get(0).getConfidence() < confidenceFloor) {
+            return List.of();
+        }
+        double max = raw.get(0).getConfidence();
+        for (Candidate c : raw) {
+            c.setConfidence(Math.min(0.95, 0.5 + 0.45 * (c.getConfidence() / max)));
+        }
+        return raw;
+    }
+
+    /** 原始余弦得分（未校准、未过滤），诊断与测试用。 */
+    public List<Candidate> searchRaw(String query, int topN) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
         Map<String, Integer> q = termCount(query);
         double qNorm = norm(q);
         List<Candidate> result = new ArrayList<>();
@@ -161,14 +188,16 @@ public class VectorRetrieval {
                     sim, matchReasons(query, id)));
         }
 
-        result.sort((a, b) -> Double.compare(b.getConfidence(), a.getConfidence()));
-        // 置信度归一化：最高分映射为 0.9~0.99 区间，其余按比例
-        double max = result.isEmpty() ? 0 : result.get(0).getConfidence();
-        if (max > 0) {
-            for (Candidate c : result) {
-                c.setConfidence(Math.min(0.99, 0.5 + (c.getConfidence() / max) * 0.49));
+        // 元素名直击：用户明确提到元素（如「缺氮」「氮肥」）视为强信号，加分后再排序。
+        // 纯余弦会被「什么/表现」等常用字噪声淹没，明确点名元素时不应认错。
+        for (Candidate c : result) {
+            String element = idToEntry.get(c.getId()).getElement();
+            if (element != null && !element.isBlank() && query.contains(element)) {
+                c.setConfidence(Math.min(1.0, c.getConfidence() + ELEMENT_BOOST));
             }
         }
+
+        result.sort((a, b) -> Double.compare(b.getConfidence(), a.getConfidence()));
         return result.subList(0, Math.min(topN, result.size()));
     }
 

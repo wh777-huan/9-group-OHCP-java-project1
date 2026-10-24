@@ -12,7 +12,7 @@ spring:
 # 业务核心识别逻辑依赖本地知识库检索，大模型仅用于结果整理输出（RAG）。
 # 填写 api-key 后自动启用；留空则自动降级为纯知识库规则输出，现场演示零依赖。
 llm:
-  enabled: true
+  enabled: false
   base-url: https://api.deepseek.com/v1
   api-key: ${LLM_API_KEY:sk-xxxxxxxx}
   model-name: deepseek-chat
@@ -23,7 +23,7 @@ llm:
 app:
   knowledge-file: knowledge/knowledge.json
   top-candidates: 3
-  confidence-floor: 0.15
+  confidence-floor: 0.08
 
 logging:
   level:
